@@ -1,0 +1,11 @@
+---
+# handlers file for jibri
+
+---
+- name: systemd reload
+  command: systemctl daemon-reload
+
+- name: restart jibri
+  service:
+    name: jibri
+    state: restarted
