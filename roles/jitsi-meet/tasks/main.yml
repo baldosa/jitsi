@@ -1,0 +1,459 @@
+---
+
+- name: Install certbot
+  apt:
+    pkg: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+      - certbot
+      - python3-certbot-nginx
+
+- name: Ask for a LE certificate
+  command:
+    cmd: certbot --nginx -d {{ meet_domain }} --agree-tos -m {{ le_email }} -n
+    creates: /etc/letsencrypt/live/{{ meet_domain }}/privkey.pem
+
+- name: Check if there's cerbot config in nginx
+  shell:
+    cmd: grep -q Certbot /etc/nginx/sites-enabled/default
+  register: certbot_entries
+  check_mode: no
+  failed_when: false
+  changed_when: false
+
+- name: Clean nginx conf from LE entries
+  command: certbot --nginx rollback
+  when: certbot_entries.rc == 0
+  notify: reload nginx
+
+- name: Install build deps
+  apt:
+    name: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+      - libsasl2-modules-ldap
+      - sasl2-bin
+      - liblua5.2-dev
+      - libsasl2-dev
+      - libssl-dev
+      - lua-basexx
+      - lua-cjson
+      - lua-ldap
+      - luarocks
+      - git
+      - gcc
+      - patch
+
+- name: Build lua cyrussasl
+  command:
+    cmd: luarocks install cyrussasl 1.1.0-1
+    creates: /usr/local/lib/luarocks/rocks/cyrussasl/
+
+- name: Build lua net-url
+  command:
+    cmd: luarocks install net-url 0.9-1
+    creates: /usr/local/lib/luarocks/rocks/net-url/
+
+- name: check if luacrypto is build
+  stat:
+    path: /usr/local/lib/luarocks/rocks/luacrypto/
+  register: luacrypto_dir
+  check_mode: no
+
+- import_tasks: tasks/luacrypto.yml
+  when: luacrypto_dir.stat.exists == False
+
+- name: Add prosody to sasl group
+  user:
+    name: prosody
+    append: yes
+    groups: sasl
+  notify:
+   - restart prosody
+
+- name: Enable saslauthd
+  lineinfile:
+    path: /etc/default/saslauthd
+    regexp: 'START='
+    line: 'START=yes'
+  notify:
+   - restart saslauthd
+   - restart prosody
+
+- name: Use ldap for saslauthd I
+  lineinfile:
+    path: /etc/default/saslauthd
+    regexp: 'MECHANISMS='
+    line: 'MECHANISMS="ldap"'
+  notify:
+   - restart saslauthd
+   - restart prosody
+
+- name: saslauthd ldap conf
+  template:
+    src: saslauthd.conf
+    dest: /etc/saslauthd.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+   - restart saslauthd
+   - restart prosody
+
+- name: saslauthd xmpp conf I
+  file:
+    state: directory
+    path: /etc/sasl
+    owner: root
+    group: root
+    mode: 0755
+
+- name: saslauthd xmpp conf II
+  template:
+    src: sasl_xmpp.conf
+    dest: /etc/sasl/xmpp.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+   - restart saslauthd
+   - restart prosody
+
+- name: Install Java
+  include_role:
+    name: common
+    tasks_from: java
+
+- name: Add jitsi repo
+  include_role:
+    name: common
+    tasks_from: jitsi_repo
+
+- include: preconfigure_jitsi.yml
+  tags:
+    - pkginstall
+
+- include: systemd_tuning.yml
+
+- name: Install dependencies
+  apt:
+    pkg: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+      - nginx
+      - wget
+  tags:
+    - pkginstall
+
+- import_tasks: tasks/certbot.yml
+  when: debian_certbot
+  tags:
+    - pkginstall
+
+- name: Install Jitsi Meet
+  apt:
+    pkg: "{{ packages }}"
+    state: present
+    install_recommends: no  # avoid pulling sturn
+  vars:
+    packages:
+      - jitsi-meet-web
+      - jitsi-meet-web-config
+      - jicofo
+      - jitsi-meet-prosody
+  tags:
+    - pkginstall
+
+- name: Disable encryption requirement for clients
+  lineinfile:
+    path: /etc/prosody/prosody.cfg.lua
+    regexp: 'c2s_require_encryption = '
+    line: 'c2s_require_encryption = false '
+  notify:
+   - restart prosody
+
+- name: Listen on all ifaces
+  lineinfile:
+    path: /etc/prosody/prosody.cfg.lua
+    regexp: 'component_interface = '
+    insertafter: 'certificates = "certs"'
+    line: 'component_interface = { "*" }'
+  notify:
+   - restart prosody
+
+- import_tasks: tasks/ldap.yml
+  when: xmpp_auth == "ldap"
+  tags:
+    - authconf
+
+- import_tasks: tasks/token.yml
+  when: xmpp_auth == "token"
+  tags:
+    - authconf
+
+- name: Add presence_idendity when storing participants metadata in recordings
+  file:
+    state: link
+    src: /usr/share/jitsi-meet/prosody-plugins/mod_presence_identity.lua
+    dest: /usr/lib/prosody/modules/mod_presence_identity.lua
+    owner: root
+    group: root
+  notify:
+   - restart prosody
+  tags:
+    - prosodyconf
+
+- name: Prosody domain conf
+  template:
+    src: prosody_domain.cfg.lua
+    dest: /etc/prosody/conf.avail/{{ meet_domain }}.cfg.lua
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+   - restart prosody
+  tags:
+    - prosodyconf
+    - authconf
+
+- name: Jitsi Meet client config
+  template:
+    src: jitsimeet-config.js
+    dest: /etc/jitsi/meet/{{ meet_domain }}-config.js
+    owner: root
+    group: root
+    mode: 0644
+  tags:
+    - meetconf
+    - authconf
+
+- name: Jicofo config I
+  template:
+    src: jicofo_config
+    dest: /etc/jitsi/jicofo/config
+    owner: jicofo
+    group: jitsi
+    mode: 0644
+  notify:
+   - restart jicofo
+  tags:
+    - jicofoconf
+
+- name: Jicofo config II
+  template:
+    src: jicofo_sip-communicator.properties
+    dest: /etc/jitsi/jicofo/sip-communicator.properties
+    owner: jicofo
+    group: jitsi
+    mode: 0600
+  notify:
+   - restart jicofo
+  tags:
+    - jicofoconf
+    - authconf
+
+- name: Jicofo config III
+  template:
+    src: jicofo.conf
+    dest: /etc/jitsi/jicofo/jicofo.conf
+    owner: jicofo
+    group: jitsi
+    mode: 0644
+  notify:
+   - restart jicofo
+  tags:
+    - jicofoconf
+
+- name: Nginx virtualhost config
+  template:
+    src: nginx.conf
+    dest: /etc/nginx/sites-available/{{ meet_domain}}.conf
+    owner: root
+    group: root
+    mode: 0644
+  notify:
+   - reload nginx
+  tags:
+    - nginxconf
+
+- name: Enable nginx virtualhost
+  file:
+    state: link
+    src: /etc/nginx/sites-available/{{ meet_domain}}.conf
+    dest: /etc/nginx/sites-enabled/{{ meet_domain}}.conf
+    owner: root
+    group: root
+  notify:
+   - reload nginx
+  tags:
+    - nginxconf
+
+- include: xmpp_users.yml
+  tags:
+    - xmppusers
+
+- name: Add stretch repository
+  apt_repository:
+    repo: deb http://deb.debian.org/debian stretch main
+    state: present
+    filename: 'local-stretch'
+  when: ansible_distribution != 'Ubuntu'
+
+- name: Add bionic repository
+  apt_repository:
+    repo: deb http://security.ubuntu.com/ubuntu bionic-security main
+    state: present
+    filename: 'local-bionic'
+  when: ansible_distribution == 'Ubuntu' and ansible_distribution_version == '20.04'
+
+- name: Install packages for luacrypto
+  apt:
+    name: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+      - libssl1.0-dev
+      - gcc
+      - git
+      - lua-cjson-dev
+      - liblua5.2-dev
+      - luarocks
+
+- name: Install libssl1.0-dev
+  apt:
+    name: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+      - libssl1.0.2
+  when: ansible_distribution != 'Ubuntu'
+
+- name: Build lua luajwtjitsi
+  command:
+    cmd: luarocks install luajwtjitsi
+    creates: /usr/local/lib/luarocks/rocks/luajwtjitsi
+  notify:
+    - restart prosody
+
+- name: Remove locally created lua-cjson, breaks prosody
+  file:
+    path: /usr/local/lib/lua/5.2/cjson.so
+    state: absent
+
+- name: Remove stretch repository
+  apt_repository:
+    repo: deb http://deb.debian.org/debian stretch main
+    state: absent
+    filename: 'local-stretch'
+  when: ansible_distribution != 'Ubuntu'
+
+- name: Remove bionic repository
+  apt_repository:
+    repo: deb http://security.ubuntu.com/ubuntu bionic-security main
+    state: absent
+    filename: 'local-bionic'
+  when: ansible_distribution == 'Ubuntu' and ansible_distribution_version == '20.04'
+
+- name: Restore libssl-dev
+  apt:
+    name: libssl-dev
+    state: present
+
+- name: Preconfigure Jicofo XMPP user I
+  debconf:
+    name: jicofo
+    question: jicofo/jicofo-authuser
+    vtype: string
+    value: "{{ jicofo_user }}"
+  changed_when: False
+
+- name: Preconfigure Jicofo XMPP user II
+  debconf:
+    name: jicofo
+    question: jicofo/jicofo-authpassword
+    vtype: password
+    value: "{{ jicofo_pass }}"
+  changed_when: False
+
+- name: Preconfigure Jicofo component secret
+  debconf:
+    name: jicofo
+    question: jicofo/jicofosecret
+    vtype: password
+    value: "{{ jicofo_secret }}"
+  changed_when: False
+
+- name: Preconfigure jitsi-videobridge
+  debconf:
+    name: jitsi-videobridge
+    question: jitsi-videobridge/jvb-hostname
+    vtype: string
+    value: "{{ meet_domain }}"
+
+- name: Preconfigure Jitsi Meet I
+  debconf:
+    name: jitsi-meet
+    question: jitsi-meet/jvb-hostname
+    vtype: string
+    value: "{{ meet_domain }}"
+
+- name: Install Jitsi Meet Token support
+  apt:
+    pkg: "{{ packages }}"
+    state: present
+    install_recommends: no  # avoid pulling sturn
+  vars:
+    packages:
+      - lua-basexx
+      - lua-cjson
+  tags:
+    - pkginstall
+  notify:
+   - restart prosody
+
+- name: Copy prosody module for token based moderation
+  copy:
+    src: "{{ item }}"
+    dest: /usr/share/jitsi-meet/prosody-plugins/{{ item | basename }}
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - prosody_modules/mod_token_moderation.lua
+  notify:
+   - restart prosody
+
+- name: check if luacrypto is build
+  stat:
+    path: /usr/local/lib/luarocks/rocks/luacrypto/
+  register: luacrypto_dir
+  check_mode: no
+
+- import_tasks: tasks/luacrypto.yml
+  when: luacrypto_dir.stat.exists == False
+
+- name: Videobridge users
+  shell:
+    cmd: prosodyctl register {{ hostvars[item].videobridge_user }} auth.{{ meet_domain }} {{ hostvars[item].videobridge_pass }}
+    creates: /var/lib/prosody/auth%2e{{ meet_domain | replace(".","%2e") | replace("-","%2d") }}/accounts/{{ hostvars[item].videobridge_user | replace(".","%2e") | replace("-","%2d") | replace("_","%5f") }}.dat
+  with_items: "{{ groups['videobridges'] }}"
+
+- name: Jibri users in auth domain
+  shell:
+    cmd: prosodyctl register {{ hostvars[item].jibri_user }} auth.{{ meet_domain }} {{ hostvars[item].jibri_pass }}
+    creates: /var/lib/prosody/auth%2e{{ meet_domain | replace(".","%2e") | replace("-","%2d") }}/accounts/{{ hostvars[item].jibri_user | replace(".","%2e") | replace("-","%2d") | replace("_","%5f") }}.dat
+  with_items: "{{ groups['jibris'] }}"
+
+- name: Jibri users in recorder domain
+  shell:
+    cmd: prosodyctl register {{ hostvars[item].jibri_user }} recorder.{{ meet_domain }} {{ hostvars[item].jibri_pass }}
+    creates: /var/lib/prosody/recorder%2e{{ meet_domain | replace(".","%2e") | replace("-","%2d") }}/accounts/{{ hostvars[item].jibri_user | replace(".","%2e") | replace("-","%2d") | replace("_","%5f") }}.dat
+  with_items: "{{ groups['jibris'] }}"
+
+- name: Prometheus exporter user
+  shell:
+    cmd: prosodyctl register {{ exporter_xmpp_user }} auth.{{ meet_domain }} {{ exporter_xmpp_pass }}
+    creates: /var/lib/prosody/auth%2e{{ meet_domain | replace(".","%2e") | replace("-","%2d") }}/accounts/{{ exporter_xmpp_user | replace(".","%2e") | replace("-","%2d") | replace("_","%5f") }}.dat
