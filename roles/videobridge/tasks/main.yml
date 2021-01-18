@@ -1,5 +1,4 @@
 ---
-
 - name: Install Java
   include_role:
     name: common
@@ -10,8 +9,6 @@
     name: common
     tasks_from: jitsi_repo
 
-# On additional Videobridge installations,
-# the hostname here is that of the main one
 - name: Preconfigure Videobridge
   debconf:
     name: jitsi-videobridge
@@ -19,8 +16,6 @@
     vtype: string
     value: "{{ meet_domain }}"
 
-## Parece que ya no se registra como componente
-## Y el user/pass lo sobreescribimos con template
 # - name: Preconfigure Videobridge II
 #   debconf:
 #     name: jitsi-videobridge

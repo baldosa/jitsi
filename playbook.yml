@@ -1,7 +1,7 @@
 ---
 
 - name: Main server configuration
-  hosts: central
+  hosts: all
   user: root
   roles:
   - { role: jitsi-meet, tags: [ 'meet' ] }
