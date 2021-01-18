@@ -1,0 +1,10 @@
+---
+# handlers file for videobridge
+---
+- name: systemd reload
+  command: systemctl daemon-reload
+
+- name: restart jvb
+  service:
+    name: jitsi-videobridge2
+    state: restarted
