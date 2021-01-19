@@ -1,0 +1,19 @@
+---
+- name: Add Jitsi packaging GPG key
+  become: yes
+  apt_key:
+    url: https://download.jitsi.org/jitsi-key.gpg.key
+    state: present
+
+- name: Add Jitsi packaging local GPG key
+  become: yes
+  apt_key:
+    data: "{{ lookup('file', 'jitsi-key.gpg.key') }}"
+    state: present
+
+- name: Add Jitsi repository
+  become: yes
+  apt_repository:
+    repo: deb https://download.jitsi.org stable/
+    state: present
+    filename: 'local-jitsi'
