@@ -1,6 +1,7 @@
 ---
 - name: Preconfigure Jicofo XMPP user I
-  debconf:
+  become: yes
+  ansible.builtin.debconf:
     name: jicofo
     question: jicofo/jicofo-authuser
     vtype: string
@@ -8,7 +9,8 @@
   changed_when: False
 
 - name: Preconfigure Jicofo XMPP user II
-  debconf:
+  become: yes
+  ansible.builtin.debconf:
     name: jicofo
     question: jicofo/jicofo-authpassword
     vtype: password
@@ -16,25 +18,27 @@
   changed_when: False
 
 - name: Preconfigure Jicofo component secret
-  debconf:
+  become: yes
+  ansible.builtin.debconf:
     name: jicofo
     question: jicofo/jicofosecret
     vtype: password
     value: "{{ jicofo_secret }}"
   changed_when: False
 
-## This is used *too* by jitsi-meet-web-config.postinst
 - name: Preconfigure jitsi-videobridge
-  debconf:
+  become: yes
+  ansible.builtin.debconf:
     name: jitsi-videobridge
     question: jitsi-videobridge/jvb-hostname
     vtype: string
     value: "{{ meet_domain }}"
 
-## And this by /usr/share/jitsi-meet/scripts/install-letsencrypt-cert.sh
 - name: Preconfigure Jitsi Meet I
-  debconf:
+  become: yes
+  ansible.builtin.debconf:
     name: jitsi-meet
     question: jitsi-meet/jvb-hostname
     vtype: string
     value: "{{ meet_domain }}"
+

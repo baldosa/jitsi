@@ -1,6 +1,9 @@
+---
+
 ## Jibri XMPP credetials
-jibri_user: jibri_CHANGEME
+jibri_user: jibri_username
 jibri_pass: "{{ vault_jibri_pass }}"
 # Set this to something different that "videobridge_user" if you want to share
 # videobridge_user and videobridge_pass across different videobridges
-jibri_muc_nick: jibri_CHANGEME
+jibri_muc_nick: jibri_nickname
+

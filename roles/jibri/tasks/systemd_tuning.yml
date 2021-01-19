@@ -1,5 +1,7 @@
+---
 ## followin https://github.com/jitsi/jitsi-meet/blob/master/doc/quick-install.md#advanced-configuration
 - name: Increase TaskMax
+  become: yes
   lineinfile:
     path: /etc/systemd/system.conf
     regexp: DefaultTasksMax=
@@ -8,6 +10,7 @@
     - systemd reload
 
 - name: Increase NOFILE
+  become: yes
   lineinfile:
     path: /etc/systemd/system.conf
     regexp: DefaultLimitNOFILE=
@@ -16,6 +19,7 @@
     - systemd reload
 
 - name: Increase NPROC
+  become: yes
   lineinfile:
     path: /etc/systemd/system.conf
     regexp: DefaultLimitNPROC=
@@ -24,4 +28,3 @@
     - systemd reload
 
 - meta: flush_handlers
-

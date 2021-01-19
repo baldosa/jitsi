@@ -1,5 +1,5 @@
 -- Token moderation
--- this module looks for a field on incoming JWT tokens called "moderator".
+-- this module looks for a field on incoming JWT tokens called "moderator". 
 -- If it is true the user is added to the room as a moderator, otherwise they are set to a normal user.
 -- Note this may well break other affiliation based features like banning or login-based admins
 local log = module._log;
@@ -59,3 +59,4 @@ function setupAffiliation(room, origin, stanza)
 		end;
 	end;
 end;
+

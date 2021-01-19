@@ -1,5 +1,6 @@
-## Todo only when running on buster
+---
 - name: Add stretch repository
+  become: yes
   apt_repository:
     repo: deb http://deb.debian.org/debian stretch main
     state: present
@@ -7,6 +8,7 @@
   when: ansible_distribution != 'Ubuntu'
 
 - name: Add bionic repository
+  become: yes
   apt_repository:
     repo: deb http://security.ubuntu.com/ubuntu bionic-security main
     state: present
@@ -14,6 +16,7 @@
   when: ansible_distribution == 'Ubuntu' and ansible_distribution_version == '20.04'
 
 - name: Install packages for luacrypto
+  become: yes
   apt:
     name: "{{ packages }}"
     state: present
@@ -27,28 +30,31 @@
       - luarocks
 
 - name: Install libssl1.0-dev
+  become: yes
   apt:
     name: "{{ packages }}"
     state: present
   vars:
     packages:
-      - libssl1.0.2  # avoid libssl1.0.2 from being removed on -dev purge
+      - libssl1.0.2
   when: ansible_distribution != 'Ubuntu'
 
 - name: Build lua luajwtjitsi
+  become: yes
   command:
     cmd: luarocks install luajwtjitsi
     creates: /usr/local/lib/luarocks/rocks/luajwtjitsi
   notify:
     - restart prosody
 
-# TODO eewww
 - name: Remove locally created lua-cjson, breaks prosody
+  become: yes
   file:
     path: /usr/local/lib/lua/5.2/cjson.so
     state: absent
 
 - name: Remove stretch repository
+  become: yes
   apt_repository:
     repo: deb http://deb.debian.org/debian stretch main
     state: absent
@@ -56,6 +62,7 @@
   when: ansible_distribution != 'Ubuntu'
 
 - name: Remove bionic repository
+  become: yes
   apt_repository:
     repo: deb http://security.ubuntu.com/ubuntu bionic-security main
     state: absent
@@ -63,6 +70,7 @@
   when: ansible_distribution == 'Ubuntu' and ansible_distribution_version == '20.04'
 
 - name: Restore libssl-dev
+  become: yes
   apt:
     name: libssl-dev
     state: present

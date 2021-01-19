@@ -1,5 +1,6 @@
 ---
 - name: Install build deps
+  become: yes
   apt:
     name: "{{ packages }}"
     state: present
@@ -19,26 +20,29 @@
       - patch
 
 - name: Build lua cyrussasl
+  become: yes
   command:
     cmd: luarocks install cyrussasl 1.1.0-1
     creates: /usr/local/lib/luarocks/rocks/cyrussasl/
 
 - name: Build lua net-url
+  become: yes
   command:
     cmd: luarocks install net-url 0.9-1
     creates: /usr/local/lib/luarocks/rocks/net-url/
 
 - name: check if luacrypto is build
+  become: yes
   stat:
     path: /usr/local/lib/luarocks/rocks/luacrypto/
   register: luacrypto_dir
   check_mode: no
 
-## luacrypto (required by luajwtjitsi) build requires old ssl
 - import_tasks: tasks/luacrypto.yml
   when: luacrypto_dir.stat.exists == False
 
 - name: Add prosody to sasl group
+  become: yes
   user:
     name: prosody
     append: yes
@@ -47,6 +51,7 @@
    - restart prosody
 
 - name: Enable saslauthd
+  become: yes
   lineinfile:
     path: /etc/default/saslauthd
     regexp: 'START='
@@ -56,6 +61,7 @@
    - restart prosody
 
 - name: Use ldap for saslauthd I
+  become: yes
   lineinfile:
     path: /etc/default/saslauthd
     regexp: 'MECHANISMS='
@@ -65,6 +71,7 @@
    - restart prosody
 
 - name: saslauthd ldap conf
+  become: yes
   template:
     src: saslauthd.conf
     dest: /etc/saslauthd.conf
@@ -76,6 +83,7 @@
    - restart prosody
 
 - name: saslauthd xmpp conf I
+  become: yes
   file:
     state: directory
     path: /etc/sasl
@@ -84,6 +92,7 @@
     mode: 0755
 
 - name: saslauthd xmpp conf II
+  become: yes
   template:
     src: sasl_xmpp.conf
     dest: /etc/sasl/xmpp.conf

@@ -10,6 +10,7 @@
     tasks_from: jitsi_repo
 
 - name: Preconfigure Videobridge
+  become: yes
   debconf:
     name: jitsi-videobridge
     question: jitsi-videobridge/jvb-hostname
@@ -23,10 +24,10 @@
 #     vtype: password
 #     value: "{{ meet_domain }}"
 
-# tune systemd
 - include: systemd_tuning.yml
 
 - name: Install Videobridge
+  become: yes
   apt:
     pkg: "{{ packages }}"
     state: present
@@ -35,6 +36,7 @@
       - jitsi-videobridge2
 
 - name: Configure videobridge I
+  become: yes
   template:
     src: videobridge_sip-communicator.properties
     dest: /etc/jitsi/videobridge/sip-communicator.properties
@@ -46,8 +48,8 @@
   notify:
     - restart jvb
 
-# 644 con una clave... sssstupendo
 - name: Configure videobridge II
+  become: yes
   template:
     src: "{{ item }}"
     dest: /etc/jitsi/videobridge/{{ item }}
@@ -62,28 +64,3 @@
   notify:
     - restart jvb
 
-- name: Increase TaskMax
-  lineinfile:
-    path: /etc/systemd/system.conf
-    regexp: DefaultTasksMax=
-    line: DefaultTasksMax=65000
-  notify:
-    - systemd reload
-
-- name: Increase NOFILE
-  lineinfile:
-    path: /etc/systemd/system.conf
-    regexp: DefaultLimitNOFILE=
-    line: DefaultLimitNOFILE=65000
-  notify:
-    - systemd reload
-
-- name: Increase NPROC
-  lineinfile:
-    path: /etc/systemd/system.conf
-    regexp: DefaultLimitNPROC=
-    line: DefaultLimitNPROC=65000
-  notify:
-    - systemd reload
-
-- meta: flush_handlers

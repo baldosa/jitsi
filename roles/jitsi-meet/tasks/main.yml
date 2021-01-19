@@ -1,5 +1,4 @@
 ---
-
 - name: Install Java
   include_role:
     name: common
@@ -10,13 +9,14 @@
     name: common
     tasks_from: jitsi_repo
 
-- include: preconfigure_jitsi.yml
-  tags:
-    - pkginstall
+    #- include: preconfigure_jitsi.yml
+    #  tags:
+    #    - pkginstall
 
 - include: systemd_tuning.yml
 
 - name: Install dependencies
+  become: yes
   apt:
     pkg: "{{ packages }}"
     state: present
@@ -27,16 +27,16 @@
   tags:
     - pkginstall
 
-- import_tasks: tasks/certbot.yml
-  when: debian_certbot
-  tags:
-    - pkginstall
+    #- import_tasks: tasks/certbot.yml
+    #  when: debian_certbot
+    #  tags:
+    #    - pkginstall
 
 - name: Install Jitsi Meet
+  become: yes
   apt:
     pkg: "{{ packages }}"
     state: present
-    install_recommends: no  # avoid pulling sturn
   vars:
     packages:
       - jitsi-meet-web
@@ -47,6 +47,7 @@
     - pkginstall
 
 - name: Disable encryption requirement for clients
+  become: yes
   lineinfile:
     path: /etc/prosody/prosody.cfg.lua
     regexp: 'c2s_require_encryption = '
@@ -55,6 +56,7 @@
    - restart prosody
 
 - name: Listen on all ifaces
+  become: yes
   lineinfile:
     path: /etc/prosody/prosody.cfg.lua
     regexp: 'component_interface = '
@@ -74,6 +76,7 @@
     - authconf
 
 - name: Add presence_idendity when storing participants metadata in recordings
+  become: yes
   file:
     state: link
     src: /usr/share/jitsi-meet/prosody-plugins/mod_presence_identity.lua
@@ -86,6 +89,7 @@
     - prosodyconf
 
 - name: Prosody domain conf
+  become: yes
   template:
     src: prosody_domain.cfg.lua
     dest: /etc/prosody/conf.avail/{{ meet_domain }}.cfg.lua
@@ -99,6 +103,7 @@
     - authconf
 
 - name: Jitsi Meet client config
+  become: yes
   template:
     src: jitsimeet-config.js
     dest: /etc/jitsi/meet/{{ meet_domain }}-config.js
@@ -110,6 +115,7 @@
     - authconf
 
 - name: Jicofo config I
+  become: yes
   template:
     src: jicofo_config
     dest: /etc/jitsi/jicofo/config
@@ -122,6 +128,7 @@
     - jicofoconf
 
 - name: Jicofo config II
+  become: yes
   template:
     src: jicofo_sip-communicator.properties
     dest: /etc/jitsi/jicofo/sip-communicator.properties
@@ -135,6 +142,7 @@
     - authconf
 
 - name: Jicofo config III
+  become: yes
   template:
     src: jicofo.conf
     dest: /etc/jitsi/jicofo/jicofo.conf
@@ -147,6 +155,7 @@
     - jicofoconf
 
 - name: Nginx virtualhost config
+  become: yes
   template:
     src: nginx.conf
     dest: /etc/nginx/sites-available/{{ meet_domain}}.conf
@@ -159,6 +168,7 @@
     - nginxconf
 
 - name: Enable nginx virtualhost
+  become: yes
   file:
     state: link
     src: /etc/nginx/sites-available/{{ meet_domain}}.conf

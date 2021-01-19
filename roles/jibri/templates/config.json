@@ -22,7 +22,7 @@
             ],
             // The xmpp domain we'll connect to on the XMPP server
             "xmpp_domain": "{{ meet_domain }}",
-            // Jibri will login to the xmpp server as a privileged user
+            // Jibri will login to the xmpp server as a privileged user 
             "control_login": {
                 // The domain to use for logging in
                 "domain": "auth.{{ meet_domain }}",
@@ -30,8 +30,8 @@
                 "username": "{{ jibri_user }}",
                 "password": "{{ jibri_pass }}"
             },
-            // Using the control_login information above, Jibri will join
-            //  a control muc as a means of announcing its availability
+            // Using the control_login information above, Jibri will join 
+            //  a control muc as a means of announcing its availability 
             //  to provide services for a given environment
             "control_muc": {
                 "domain": "internal.auth.{{ meet_domain }}",

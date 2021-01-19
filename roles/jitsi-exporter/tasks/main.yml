@@ -1,6 +1,5 @@
----
-# tasks file for jitsi-exporter
 - name: Install docker
+  become: yes
   apt:
     name: "{{ packages }}"
     state: present
@@ -10,6 +9,7 @@
       - python-docker
 
 - name: Run jvb-exporter
+  become: yes
   docker_container:
     name: jvb-exporter
     image: karrieretutor/jitsi:prom-exporter-latest
@@ -25,6 +25,7 @@
       XMPP_INTERNAL_MUC_DOMAIN: internal.auth.{{ meet_domain }}
 
 - name: Copy service file
+  become: yes
   template:
     src: "{{ item }}"
     dest: /etc/systemd/system/{{ item }}
@@ -35,6 +36,7 @@
     - docker-jvb-exporter.service
 
 - name: Enable service files
+  become: yes
   systemd:
     name: "{{ item }}"
     daemon_reload: yes

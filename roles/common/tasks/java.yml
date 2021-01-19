@@ -1,6 +1,4 @@
 ---
-# videobridge does not work fine with openjdk-11 :-(
-# TODO: re-test in the future
 - name: check if openjdk-11 is installed
   stat:
     path: /usr/lib/jvm/java-11-openjdk-amd64/jre/bin/java
@@ -15,11 +13,16 @@
   when: java11.stat.exists == False  and ansible_distribution != 'Ubuntu'
 
 - name: Install openjdk-11-jre-headless
+  become: yes
   apt:
     name: openjdk-11-jre-headless
     state: present
   when: java11.stat.exists == False
 
 - name: Disable stretch repository
+  become: yes
   apt_repository:
     repo: deb http://deb.debian.org/debian stretch main
+    state: absent
+    filename: 'local-stretch'
+  when: java11.stat.exists == False  and ansible_distribution != 'Ubuntu'

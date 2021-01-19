@@ -1,23 +1,24 @@
 ---
-# tasks file for common
-
 - name: Add Jitsi packaging GPG key
+  become: yes
   apt_key:
     url: https://download.jitsi.org/jitsi-key.gpg.key
     state: present
   tags:
     - jitsirepo
-  when: not use_included_jitsi_gpg_key
+      #when: not use_included_jitsi_gpg_key
 
 - name: Add Jitsi packaging local GPG key
+  become: yes
   apt_key:
     data: "{{ lookup('file', 'jitsi-key.gpg.key') }}"
     state: present
   tags:
     - jitsirepo
-  when: use_included_jitsi_gpg_key
+      #when: use_included_jitsi_gpg_key
 
 - name: Add Jitsi repository
+  become: yes
   apt_repository:
     repo: deb https://download.jitsi.org stable/
     state: present

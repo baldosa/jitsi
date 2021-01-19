@@ -1,5 +1,6 @@
 ---
 - name: Install Jitsi Meet Token support
+  become: yes
   apt:
     pkg: "{{ packages }}"
     state: present
@@ -14,6 +15,7 @@
    - restart prosody
 
 - name: Copy prosody module for token based moderation
+  become: yes
   copy:
     src: "{{ item }}"
     dest: /usr/share/jitsi-meet/prosody-plugins/{{ item | basename }}
@@ -26,6 +28,7 @@
    - restart prosody
 
 - name: check if luacrypto is build
+  become: yes
   stat:
     path: /usr/local/lib/luarocks/rocks/luacrypto/
   register: luacrypto_dir
@@ -33,3 +36,4 @@
 
 - import_tasks: tasks/luacrypto.yml
   when: luacrypto_dir.stat.exists == False
+
