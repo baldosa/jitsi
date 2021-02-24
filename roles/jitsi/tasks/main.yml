@@ -1,0 +1,58 @@
+---
+- name: Add Jitsi packaging GPG key
+  become: yes
+  shell:
+    cmd: "curl https://download.jitsi.org/jitsi-key.gpg.key | sudo sh -c 'gpg --dearmor > /usr/share/keyrings/jitsi-keyring.gpg'"
+
+- name: Add Jitsi repository
+  become: yes
+  shell:
+    cmd: "echo 'deb [signed-by=/usr/share/keyrings/jitsi-keyring.gpg] https://download.jitsi.org stable/' | sudo tee /etc/apt/sources.list.d/jitsi-stable.list > /dev/null"
+
+- name: Update
+  become: yes
+  shell:
+    cmd: "apt update"
+
+- name: Install jitsi
+  become: yes
+  package:
+    name: jitsi-meet
+    state: latest
+
+- name: Add eth1 Public address
+  become: yes
+  shell:
+    cmd: "echo 'org.ice4j.ice.harvest.NAT_HARVESTER_PUBLIC_ADDRESS={{ eth1_address }}' >> /etc/jitsi/videobridge/sip-communicator.properteis"
+
+- name: Add eth0 local address
+  become: yes
+  shell:
+    cmd: "echo 'org.ice4j.ice.harvest.NAT_HARVESTER_LOCAL_ADDRESS={{ eth0_address }}' >> /etc/jitsi/videobridge/sip-communicator.properteis"
+
+- name: Add LimitNOFILE
+  become: yes
+  shell:
+    cmd: "echo 'DefaultLimitNOFILE=65000' >> /etc/system/system.conf"
+
+- name: Systemctl DefaultLimitNOFILE
+  become: yes
+  command: "systemctl show --property DefaultLimitNOFILE"
+
+- name: Add LimitNPROC
+  become: yes
+  shell:
+    cmd: "echo 'DefaultLimitNPROC=65000' >> /etc/system/system.conf"
+
+- name: Systemctl DefaultLimitNPROC
+  become: yes
+  command: "systemctl show --property DefaultLimitNPROC "
+
+- name: Add TasksMax
+  become: yes
+  shell:
+    cmd: "echo 'DefaultTasksMax=65000' >> /etc/system/system.conf"
+
+- name: Systemctl DefaultTasksMax
+  become: yes
+  command: "systemctl show --property DefaultTasksMax"

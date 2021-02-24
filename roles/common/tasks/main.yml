@@ -1,53 +1,27 @@
 ---
-# tasks file for common
-#
+- name: Add hostname
+  hostname:
+    name: meet
 
-- name: check if openjdk-8 is installed
-  stat:
-    path: /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java
-  register: java8
-  check_mode: no
+- name: Before Ansible 2.3, option 'dest', 'destfile' or 'name' was used instead of 'path'
+  ansible.builtin.replace:
+    path: /etc/hosts
+    regexp: '(\s+)buster(\s+.*)?$'
+    replace: '\1meet\2'
 
-- name: Add stretch repository
-  apt_repository:
-    repo: deb http://deb.debian.org/debian stretch main
-    state: present
-    filename: 'local-stretch'
-  when: java8.stat.exists == False  and ansible_distribution != 'Ubuntu'
+- name: Before Ansible 2.4, option 'dest', 'destfile' or 'name' was used instead of 'path'
+  ansible.builtin.replace:
+    path: /etc/hosts
+    regexp: '(\s+)buster\.localdomain(\s+.*)?$'
+    replace: '\1meet\.localdomain\2'
 
-- name: Install openjdk-8-jre-headless
-  apt:
-    name: openjdk-8-jre-headless
-    state: present
-  when: java8.stat.exists == False
+- name: setup ip address in /etc/hosts
+  become: yes
+  shell: "echo '{{ eth1_address }} {{ domain_jitsi }}   meet' >> /etc/hosts"
 
-- name: Disable stretch repository
-  apt_repository:
-    repo: deb http://deb.debian.org/debian stretch main
-    state: absent
-    filename: 'local-stretch'
-  when: java8.stat.exists == False  and ansible_distribution != 'Ubuntu'
-
-- name: Add Jitsi packaging GPG key
-  apt_key:
-    url: https://download.jitsi.org/jitsi-key.gpg.key
-    state: present
-  tags:
-    - jitsirepo
-  when: not use_included_jitsi_gpg_key
-
-- name: Add Jitsi packaging local GPG key
-  apt_key:
-    data: "{{ lookup('file', 'jitsi-key.gpg.key') }}"
-    state: present
-  tags:
-    - jitsirepo
-  when: use_included_jitsi_gpg_key
-
-- name: Add Jitsi repository
-  apt_repository:
-    repo: deb https://download.jitsi.org stable/
-    state: present
-    filename: 'local-jitsi'
-  tags:
-    - jitsirepo
+- name: Installation common
+  become: yes
+  with_items: "{{ common_name }}"
+  package:
+    pkg: "{{ item.name }}"
+    state: latest

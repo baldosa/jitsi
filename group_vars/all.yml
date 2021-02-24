@@ -1,0 +1,11 @@
+---
+domain_jitsi: meet.example.com
+eth0_address: 10.0.2.15
+eth1_address: 192.168.33.10
+
+TCP_port: 80
+Jitsi_TCP_port: 443
+Audio_Video_port: 10000
+SSH_port: 22
+UDP_port: 3478
+Coturn_port: 5349
