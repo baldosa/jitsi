@@ -3,3 +3,4 @@ common_name:
   - name: curl
   - name: gpg
   - name: apt-transport-https
+  - name: software-properties-common

@@ -1,16 +1,27 @@
 ---
 - name: Add hostname
   hostname:
-  become: yes
     name: meet
+
+- name: Before Ansible 2.3, option 'dest', 'destfile' or 'name' was used instead of 'path'
+  ansible.builtin.replace:
+    path: /etc/hosts
+    regexp: '(\s+)buster(\s+.*)?$'
+    replace: '\1meet\2'
+
+- name: Before Ansible 2.4, option 'dest', 'destfile' or 'name' was used instead of 'path'
+  ansible.builtin.replace:
+    path: /etc/hosts
+    regexp: '(\s+)buster\.localdomain(\s+.*)?$'
+    replace: '\1meet\.localdomain\2'
+
+- name: setup ip address in /etc/hosts
+  become: yes
+  shell: "echo '{{ eth1_address }} {{ domain_jitsi }}   meet' >> /etc/hosts"
 
 - name: Installation common
   become: yes
-  with_item: "{{ common_name }}"
+  with_items: "{{ common_name }}"
   package:
     pkg: "{{ item.name }}"
     state: latest
-
-- name: Enable universe repository
-    apt_repository:
-      repo: universe
