@@ -1,10 +1,7 @@
----
 
+---
 - name: Main server configuration
   hosts: all
   roles:
     - common
-    - jitsi-meet
-    #- videobridge
-    #- jibri
-    #- jitsi-exporter
+     -jitsi

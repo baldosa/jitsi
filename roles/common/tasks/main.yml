@@ -1,19 +1,16 @@
 ---
-- name: Add Jitsi packaging GPG key
+- name: Add hostname
+  hostname:
   become: yes
-  apt_key:
-    url: https://download.jitsi.org/jitsi-key.gpg.key
-    state: present
+    name: meet
 
-- name: Add Jitsi packaging local GPG key
+- name: Installation common
   become: yes
-  apt_key:
-    data: "{{ lookup('file', 'jitsi-key.gpg.key') }}"
-    state: present
+  with_item: "{{ common_name }}"
+  package:
+    pkg: "{{ item.name }}"
+    state: latest
 
-- name: Add Jitsi repository
-  become: yes
-  apt_repository:
-    repo: deb https://download.jitsi.org stable/
-    state: present
-    filename: 'local-jitsi'
+- name: Enable universe repository
+    apt_repository:
+      repo: universe
