@@ -1,8 +1,0 @@
-
----
-- name: Main server configuration
-  become: yes
-  hosts: all
-  roles:
-    - common
-    - jitsi

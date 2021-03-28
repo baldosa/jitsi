@@ -1,6 +1,0 @@
-common_name:
-  - name: wget
-  - name: curl
-  - name: gpg
-  - name: apt-transport-https
-  - name: software-properties-common
